@@ -237,31 +237,39 @@ async function callDeepSeek(systemPrompt: string, userPrompt: string): Promise<s
     throw new Error('DEEPSEEK_API_KEY not set')
   }
 
-  const response = await fetch(DEEPSEEK_BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 1024,
-      response_format: { type: 'json_object' },
-    }),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`DeepSeek API error: ${response.status} ${errorText}`)
+  try {
+    const response = await fetch(DEEPSEEK_BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 1024,
+        response_format: { type: 'json_object' },
+      }),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`DeepSeek API error: ${response.status} ${errorText}`)
+    }
+
+    const data = await response.json()
+    return data.choices?.[0]?.message?.content || ''
+  } finally {
+    clearTimeout(timeout)
   }
-
-  const data = await response.json()
-  return data.choices?.[0]?.message?.content || ''
 }
 
 function cleanJsonString(str: string): string {
