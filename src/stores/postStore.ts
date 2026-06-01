@@ -106,13 +106,19 @@ function mapMatch(raw: Record<string, unknown>): Match {
   if (typeof rawDetails === 'string') {
     try { matchDetails = JSON.parse(rawDetails) } catch {}
   } else if (typeof rawDetails === 'object' && rawDetails !== null) {
-    matchDetails = { ...matchDetails, ...(rawDetails as Record<string, number>) }
+    const d = rawDetails as Record<string, number>
+    matchDetails = {
+      ipMatch: d.ipScore ?? d.ipMatch ?? 0,
+      timeMatch: d.timeScore ?? d.timeMatch ?? 0,
+      contentMatch: d.contentScore ?? d.contentMatch ?? 0,
+      locationScore: d.locationScore ?? 0,
+    }
   }
 
   return {
     id: String(raw.id ?? ''),
-    supplyPost: mapPost(raw as Record<string, unknown>),
-    demandPost: mapPost(raw as Record<string, unknown>),
+    supplyPost: (raw.supplyPost as Post) ?? mapPost(raw),
+    demandPost: (raw.demandPost as Post) ?? mapPost(raw),
     score: Number(raw.score ?? 0),
     reason: String(raw.reason ?? ''),
     matchDetails,
@@ -228,30 +234,29 @@ export const usePostStore = create<PostState>((set, get) => ({
   fetchMatches: async () => {
     set({ loading: true, error: null })
     try {
-      const rawList = await apiGet<Record<string, unknown>[] | Record<string, unknown>>('/matches')
-      const list = Array.isArray(rawList)
-        ? rawList.map((m: Record<string, unknown>) => {
-            const rawSupply = (m.supply_title ? {
-              id: m.supply_id,
-              type: 'supply',
-              title: m.supply_title,
-              ip_name: m.supply_ip_name,
-              ai_summary: m.supply_summary,
-            } : {}) as Record<string, unknown>
-            const rawDemand = (m.demand_title ? {
-              id: m.demand_id,
-              type: 'demand',
-              title: m.demand_title,
-              ip_name: m.demand_ip_name,
-              ai_summary: m.demand_summary,
-            } : {}) as Record<string, unknown>
-            return {
-              ...m,
-              supplyPost: mapPost({ ...rawSupply, ...(m as Record<string, unknown>) }),
-              demandPost: mapPost({ ...rawDemand, ...(m as Record<string, unknown>) }),
-            } as Match
-          })
-        : []
+      const rawList = await apiGet<Record<string, unknown>[]>('/matches')
+      const list = (rawList || []).map((m) => {
+        const rawSupply = {
+          id: m.supply_id,
+          type: 'supply' as const,
+          title: m.supply_title,
+          ip_name: m.supply_ip_name,
+          ai_summary: m.supply_summary,
+        }
+        const rawDemand = {
+          id: m.demand_id,
+          type: 'demand' as const,
+          title: m.demand_title,
+          ip_name: m.demand_ip_name,
+          ai_summary: m.demand_summary,
+        }
+        const parsed = mapMatch({
+          ...m,
+          supplyPost: mapPost(rawSupply as Record<string, unknown>),
+          demandPost: mapPost(rawDemand as Record<string, unknown>),
+        })
+        return parsed
+      })
       set({ matches: list, loading: false })
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false })
