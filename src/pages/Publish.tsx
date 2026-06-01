@@ -60,11 +60,12 @@ export default function Publish() {
   }, [initialType])
 
   useEffect(() => {
-    fetch('https://ip-api.com/json/?fields=city,lat,lon')
+    fetch('/api/location')
       .then((r) => r.json())
-      .then((data) => {
-        if (data.city) {
-          const matched = cities.find((c) => c.name === data.city)
+      .then((res) => {
+        if (res.success && res.data?.city) {
+          const cityName = res.data.city
+          const matched = cities.find((c) => c.name === cityName)
           if (matched) {
             setCity(matched.name)
             setLatitude(matched.lat)

@@ -15,6 +15,7 @@ import authRoutes from './routes/auth.js'
 import postRoutes from './routes/posts.js'
 import matchRoutes from './routes/matches.js'
 import statsRoutes from './routes/stats.js'
+import locationRoutes from './routes/location.js'
 
 // for esm mode
 const __filename = fileURLToPath(import.meta.url)
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/posts', postRoutes)
 app.use('/api/matches', matchRoutes)
 app.use('/api/stats', statsRoutes)
+app.use('/api/location', locationRoutes)
 
 /**
  * health
