@@ -53,10 +53,28 @@ export default function Publish() {
   const [latitude, setLatitude] = useState(0)
   const [longitude, setLongitude] = useState(0)
   const [success, setSuccess] = useState(false)
+  const [locating, setLocating] = useState(true)
 
   useEffect(() => {
     setType(initialType)
   }, [initialType])
+
+  useEffect(() => {
+    fetch('https://ip-api.com/json/?fields=city,lat,lon')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.city) {
+          const matched = cities.find((c) => c.name === data.city)
+          if (matched) {
+            setCity(matched.name)
+            setLatitude(matched.lat)
+            setLongitude(matched.lng)
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLocating(false))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -222,12 +240,12 @@ export default function Publish() {
               }}
               className="w-full rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-3 text-sm text-slate-200 outline-none transition-colors focus:border-emerald-500/50 focus:bg-slate-800/70"
             >
-              <option value="">不限位置</option>
+              <option value="">{locating ? '正在自动定位...' : '不限位置'}</option>
               {cities.map((c) => (
                 <option key={c.name} value={c.name}>{c.name}</option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-slate-500">仅匹配同城或附近的需求/供给</p>
+            <p className="mt-1 text-xs text-slate-500">已自动识别你的城市位置，也可以手动修改</p>
           </div>
 
           <button
