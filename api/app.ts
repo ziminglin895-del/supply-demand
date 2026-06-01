@@ -51,6 +51,14 @@ app.use(
 )
 
 /**
+ * Production static file serving
+ */
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '..', 'dist')
+  app.use(express.static(distPath))
+}
+
+/**
  * error handler middleware
  */
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
@@ -61,13 +69,18 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
 })
 
 /**
- * 404 handler
+ * 404 handler & SPA fallback
  */
 app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    error: 'API not found',
-  })
+  if (process.env.NODE_ENV === 'production' && !req.path.startsWith('/api/')) {
+    const distPath = path.join(__dirname, '..', 'dist')
+    res.sendFile(path.join(distPath, 'index.html'))
+  } else {
+    res.status(404).json({
+      success: false,
+      error: 'API not found',
+    })
+  }
 })
 
 export default app
